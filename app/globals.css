@@ -1,0 +1,54 @@
+/* app/globals.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Scrollbar ────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #1E2433; border-radius: 3px; }
+
+/* ── Selection ────────────────────────────────────────────────────────────── */
+::selection { background: rgba(108, 99, 255, 0.35); color: #F2F2F5; }
+
+/* ── Flip card animation ──────────────────────────────────────────────────── */
+.flip-card {
+  perspective: 600px;
+  display: inline-block;
+}
+.flip-card-inner {
+  position: relative;
+  transition: transform 0.15s ease;
+  transform-style: preserve-3d;
+}
+
+/* ── Number column glow on tick ─────────────────────────────────────────────── */
+@keyframes tick-glow {
+  0%   { color: #6C63FF; }
+  50%  { color: #A89EFF; }
+  100% { color: #F2F2F5; }
+}
+.tick-animate {
+  animation: tick-glow 0.4s ease forwards;
+}
+
+/* ── Gradient text utility ─────────────────────────────────────────────────── */
+.gradient-text {
+  background: linear-gradient(135deg, #6C63FF 0%, #A89EFF 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Input focus ring ─────────────────────────────────────────────────────── */
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid rgba(108, 99, 255, 0.6);
+  outline-offset: 2px;
+}
+
+/* ── Prevent zoom on mobile inputs ─────────────────────────────────────────── */
+@media (max-width: 768px) {
+  input, select, textarea { font-size: 16px !important; }
+}
