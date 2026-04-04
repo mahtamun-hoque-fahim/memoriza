@@ -3,36 +3,113 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── CSS variables — dark mode (default) ───────────────────────────────────── */
+:root {
+  --bg:         #0A0C10;
+  --surface:    #131720;
+  --border:     #1E2433;
+  --accent:     #6C63FF;
+  --accent-dim: #3D3880;
+  --text:       #F2F2F5;
+  --muted:      #6B7280;
+}
+
+/* ── CSS variables — light mode ─────────────────────────────────────────────── */
+html:not(.dark) {
+  --bg:         #F4F6FB;
+  --surface:    #FFFFFF;
+  --border:     #E2E8F0;
+  --accent:     #6C63FF;
+  --accent-dim: #EEEDff;
+  --text:       #0F1117;
+  --muted:      #64748B;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text);
+}
+
+/* ── Tailwind brand- overrides via CSS vars ──────────────────────────────── */
+.bg-brand-bg       { background-color: var(--bg); }
+.bg-brand-surface  { background-color: var(--surface); }
+.bg-brand-accent   { background-color: var(--accent); }
+.text-brand-text   { color: var(--text); }
+.text-brand-muted  { color: var(--muted); }
+.text-brand-accent { color: var(--accent); }
+.border-brand-border { border-color: var(--border); }
+.border-brand-accent { border-color: var(--accent); }
+
 /* ── Scrollbar ────────────────────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #1E2433; border-radius: 3px; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 
 /* ── Selection ────────────────────────────────────────────────────────────── */
-::selection { background: rgba(108, 99, 255, 0.35); color: #F2F2F5; }
+::selection { background: rgba(108, 99, 255, 0.25); color: var(--text); }
 
-/* ── Flip card animation ──────────────────────────────────────────────────── */
+/* ── Flip digit animation ─────────────────────────────────────────────────── */
 .flip-card {
-  perspective: 600px;
-  display: inline-block;
-}
-.flip-card-inner {
   position: relative;
-  transition: transform 0.15s ease;
-  transform-style: preserve-3d;
+  perspective: 400px;
+  display: inline-block;
+  line-height: 1;
 }
 
-/* ── Number column glow on tick ─────────────────────────────────────────────── */
+.flip-top,
+.flip-bottom {
+  display: block;
+  backface-visibility: hidden;
+  transform-origin: center;
+}
+
+@keyframes flip-top-out {
+  0%   { transform: rotateX(0deg);   opacity: 1; }
+  100% { transform: rotateX(-90deg); opacity: 0; }
+}
+
+@keyframes flip-bottom-in {
+  0%   { transform: rotateX(90deg); opacity: 0; }
+  100% { transform: rotateX(0deg);  opacity: 1; }
+}
+
+.flip-card.is-flipping .flip-top {
+  animation: flip-top-out 0.18s ease-in forwards;
+}
+
+.flip-card.is-flipping .flip-bottom {
+  animation: flip-bottom-in 0.18s ease-out 0.12s forwards;
+}
+
+/* ── Tick glow fallback ───────────────────────────────────────────────────── */
 @keyframes tick-glow {
-  0%   { color: #6C63FF; }
-  50%  { color: #A89EFF; }
-  100% { color: #F2F2F5; }
+  0%   { color: var(--accent); }
+  60%  { color: #A89EFF; }
+  100% { color: var(--text); }
 }
-.tick-animate {
-  animation: tick-glow 0.4s ease forwards;
+.tick-animate { animation: tick-glow 0.35s ease forwards; }
+
+/* ── Slide-up / fade-in ───────────────────────────────────────────────────── */
+@keyframes slide-up {
+  0%   { opacity: 0; transform: translateY(14px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+@keyframes fade-in {
+  0%   { opacity: 0; }
+  100% { opacity: 1; }
 }
 
-/* ── Gradient text utility ─────────────────────────────────────────────────── */
+.animate-slide-up { animation: slide-up 0.5s ease forwards; }
+.animate-fade-in  { animation: fade-in  0.4s ease forwards; }
+
+/* ── Pulse glow on CTA ───────────────────────────────────────────────────── */
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(108,99,255,0); }
+  50%       { box-shadow: 0 0 20px 4px rgba(108,99,255,0.22); }
+}
+.animate-pulse-glow { animation: pulse-glow 3s ease-in-out infinite; }
+
+/* ── Gradient text ───────────────────────────────────────────────────────── */
 .gradient-text {
   background: linear-gradient(135deg, #6C63FF 0%, #A89EFF 100%);
   -webkit-background-clip: text;
@@ -40,15 +117,20 @@
   background-clip: text;
 }
 
-/* ── Input focus ring ─────────────────────────────────────────────────────── */
+/* ── Focus ring ──────────────────────────────────────────────────────────── */
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
-  outline: 2px solid rgba(108, 99, 255, 0.6);
+  outline: 2px solid rgba(108, 99, 255, 0.55);
   outline-offset: 2px;
 }
 
-/* ── Prevent zoom on mobile inputs ─────────────────────────────────────────── */
+/* ── Prevent mobile zoom ─────────────────────────────────────────────────── */
 @media (max-width: 768px) {
   input, select, textarea { font-size: 16px !important; }
+}
+
+/* ── Backdrop blur fallback ──────────────────────────────────────────────── */
+@supports not (backdrop-filter: blur(1px)) {
+  .backdrop-blur-md { background-color: var(--bg) !important; }
 }

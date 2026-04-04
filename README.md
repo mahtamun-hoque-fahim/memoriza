@@ -123,6 +123,8 @@ CREATE INDEX idx_countdowns_event_date ON countdowns(event_date);
 - `DATABASE_URL_UNPOOLED`
 - `NEXT_PUBLIC_BASE_URL` (set to your Vercel URL)
 - `IP_SALT`
+- `UPSTASH_REDIS_REST_URL` *(Phase 2 — optional, rate limiting degrades gracefully without it)*
+- `UPSTASH_REDIS_REST_TOKEN` *(Phase 2 — optional)*
 
 ---
 
@@ -143,6 +145,6 @@ CREATE INDEX idx_countdowns_event_date ON countdowns(event_date);
 ## Phase Roadmap
 
 - **Phase 1** ✅ — Core create + display + share + 10/IP limit
-- **Phase 2** — OG images, flip animation, rate limiting hardening
+- **Phase 2** ✅ — OG images, flip animation, Upstash rate limiting, light/dark mode
 - **Phase 3** — Edit/delete via email token, cover images, QR codes
 - **Phase 4** — Clerk auth, dashboard, custom slugs, reminders

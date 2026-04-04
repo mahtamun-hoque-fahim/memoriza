@@ -1,6 +1,8 @@
 // app/layout.tsx
 import type { Metadata }              from 'next'
 import { DM_Sans, Syne, JetBrains_Mono, Instrument_Serif } from 'next/font/google'
+import { ThemeProvider } from '@/components/ui/ThemeProvider'
+import { Navbar }        from '@/components/ui/Navbar'
 import './globals.css'
 
 const dmSans = DM_Sans({
@@ -29,11 +31,11 @@ const instrumentSerif = Instrument_Serif({
 })
 
 export const metadata: Metadata = {
-  title:       'Countdown — Share the moment',
+  title:       'Memoriza — Share the moment',
   description: 'Create a beautiful shareable countdown to any event. Birthdays, launches, anniversaries.',
-  metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL ?? 'https://localhost:3000'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL ?? 'https://memoriza.vercel.app'),
   openGraph: {
-    title:       'Countdown — Share the moment',
+    title:       'Memoriza — Share the moment',
     description: 'Create a beautiful shareable countdown to any event.',
     type:        'website',
   },
@@ -44,9 +46,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html
       lang="en"
       className={`dark ${dmSans.variable} ${syne.variable} ${jetbrainsMono.variable} ${instrumentSerif.variable}`}
+      suppressHydrationWarning
     >
-      <body className="bg-brand-bg text-brand-text font-sans antialiased min-h-screen">
-        {children}
+      <body className="font-sans antialiased min-h-screen" style={{ backgroundColor: 'var(--bg)', color: 'var(--text)' }}>
+        <ThemeProvider>
+          <Navbar />
+          <div className="pt-14">
+            {children}
+          </div>
+        </ThemeProvider>
       </body>
     </html>
   )

@@ -21,13 +21,23 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     ? `${countdown.emoji} ${countdown.name}`
     : countdown.name
 
+  const baseUrl    = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://memoriza.vercel.app'
+  const ogImageUrl = `${baseUrl}/api/og/${countdown.slug}`
+
   return {
-    title:       `${name} — Countdown`,
+    title:       `${name} — Memoriza`,
     description: `Counting down to ${countdown.name}. Share the anticipation!`,
     openGraph: {
-      title:       `${name} — Countdown`,
+      title:       `${name} — Memoriza`,
       description: `Counting down to ${countdown.name}. Share the anticipation!`,
       type:        'website',
+      images:      [{ url: ogImageUrl, width: 1200, height: 630, alt: name }],
+    },
+    twitter: {
+      card:        'summary_large_image',
+      title:       `${name} — Memoriza`,
+      description: `Counting down to ${countdown.name}. Share the anticipation!`,
+      images:      [ogImageUrl],
     },
   }
 }

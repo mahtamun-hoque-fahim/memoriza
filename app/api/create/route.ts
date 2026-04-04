@@ -4,6 +4,7 @@ import { eq, and, isNull, count } from 'drizzle-orm'
 import { getDb, schema }           from '@/lib/db'
 import { createCountdownSchema }   from '@/lib/validations'
 import { generateSlug, hashIp }    from '@/lib/utils'
+import { checkRateLimit }          from '@/lib/ratelimit'
 
 const MAX_PER_IP = 10
 const MAX_SLUG_ATTEMPTS = 5
@@ -36,6 +37,21 @@ export async function POST(req: NextRequest) {
       req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
       req.headers.get('x-real-ip') ??
       '0.0.0.0'
+
+    // ── Upstash rate limit: 5 requests per 10 min per IP ──────────────────
+    const rl = await checkRateLimit(ip)
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please wait a few minutes before trying again.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After':          String(Math.ceil((rl.reset - Date.now()) / 1000)),
+            'X-RateLimit-Remaining': '0',
+          },
+        }
+      )
+    }
 
     const ipHash = hashIp(ip)
 

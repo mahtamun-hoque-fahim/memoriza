@@ -112,11 +112,15 @@
 - SSR data fetch + client-side live timer
 - Dark theme only
 
-### Phase 2 (planned)
-- Dynamic OG images via @vercel/og
-- Flip/slide digit animation
-- Rate limiting hardening (Upstash)
-- Light/dark mode toggle
+### Phase 2 (current)
+- Dynamic OG images via `@vercel/og` at `/api/og/[slug]` (1200×630, shows emoji + event name + days left)
+- Twitter card `summary_large_image` meta tags on countdown pages
+- CSS flip animation on digit change (`.flip-card.is-flipping`, 0.18s ease-in/out)
+- Light mode support — CSS variables on `:root` / `html:not(.dark)`, toggled by ThemeProvider
+- ThemeToggle component (sun/moon icon) — persists to `localStorage`
+- Persistent Navbar with logo + theme toggle + "New" link
+- Upstash Redis rate limiting on `/api/create` (5 req / 10 min / IP, graceful degradation if not configured)
+- `suppressHydrationWarning` on `<html>` to prevent theme flash warning
 
 ### Phase 3 (planned)
 - Email-based edit/delete token
