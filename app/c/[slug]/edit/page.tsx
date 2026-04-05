@@ -4,7 +4,7 @@
 //   2. Clerk auth — signed-in users who own the countdown (no token needed)
 
 import { notFound, redirect } from 'next/navigation'
-import { auth }               from '@clerk/nextjs/server'
+import { auth }               from '@/lib/auth'
 import { eq, and, isNull }    from 'drizzle-orm'
 import { getDb, schema }      from '@/lib/db'
 import { EditForm }           from '@/components/countdown/EditForm'
@@ -46,7 +46,8 @@ async function fetchForEdit(slug: string, token: string | undefined, userId: str
 }
 
 export default async function EditPage({ params, searchParams }: Props) {
-  const { userId } = auth()
+  const session = await auth()
+  const userId  = session?.user?.id ?? null
   const token      = searchParams.token
 
   if (!userId && (!token || token.length !== 64)) {

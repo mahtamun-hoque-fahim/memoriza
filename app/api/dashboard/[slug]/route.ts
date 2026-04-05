@@ -1,6 +1,6 @@
 // app/api/dashboard/[slug]/route.ts
 import { NextRequest, NextResponse }  from 'next/server'
-import { auth }                       from '@clerk/nextjs/server'
+import { auth }                       from '@/lib/auth'
 import { eq, and, isNull }            from 'drizzle-orm'
 import { getDb, schema }              from '@/lib/db'
 import { dashboardEditSchema }        from '@/lib/validations'
@@ -12,7 +12,8 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: { slug: string } }
 ) {
-  const { userId } = auth()
+  const session = await auth()
+  const userId  = session?.user?.id
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { slug } = params
@@ -85,7 +86,8 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: { slug: string } }
 ) {
-  const { userId } = auth()
+  const session = await auth()
+  const userId  = session?.user?.id
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { slug } = params

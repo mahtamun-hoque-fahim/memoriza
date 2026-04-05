@@ -1,5 +1,5 @@
 // app/dashboard/page.tsx
-import { auth }          from '@clerk/nextjs/server'
+import { auth }          from '@/lib/auth'
 import { redirect }      from 'next/navigation'
 import { eq, and, isNull, desc } from 'drizzle-orm'
 import { getDb, schema } from '@/lib/db'
@@ -12,7 +12,8 @@ export const metadata: Metadata = {
 }
 
 export default async function DashboardPage() {
-  const { userId } = auth()
+  const session = await auth()
+  const userId  = session?.user?.id
   if (!userId) redirect('/sign-in')
 
   const db   = getDb()
