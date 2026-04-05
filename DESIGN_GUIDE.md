@@ -150,3 +150,21 @@
 - Custom slugs (e.g. `/c/fahims-wedding`)
 - Reminder emails at 7d / 1d / day-of via Resend + Vercel cron
 - Cleanup cron — hard-delete soft-deleted rows older than 1 year
+
+### Phase 4 (current)
+- Clerk auth — `ClerkProvider` in layout, `clerkMiddleware` in middleware.ts
+- `/sign-in` and `/sign-up` pages with branded Clerk component appearances
+- `/dashboard` — server-side SSR, lists all user countdowns ordered by created_at desc
+- `DashboardClient` — interactive list, single-click confirm-delete, view/edit links, view counts, custom slug badges
+- Auth users: 50 countdowns limit (vs 10 for anon IP-based)
+- Auth users: no edit token needed — `/api/dashboard/[slug]` PATCH/DELETE checks `userId` ownership
+- Anonymous users: token-based edit still works unchanged
+- Edit page (`/c/[slug]/edit`) supports both access modes: Clerk session OR `?token=...`
+- `EditForm` extended: `isAuthed` prop, custom slug field (auth only), reminders toggle
+- Custom slugs: lowercase letters + numbers + hyphens, 3–64 chars, uniqueness enforced
+- Schema: added `user_id`, `custom_slug`, `reminders_enabled`, `reminders_sent` columns
+- `/api/reminders` cron — daily 08:00 UTC, sends 7d/1d/day-of emails via Resend
+- `/api/cron/cleanup` cron — weekly Sunday 03:00 UTC, hard-deletes rows soft-deleted > 1 year ago
+- `vercel.json` — declares both cron schedules
+- `CRON_SECRET` env var protects cron endpoints
+- `@clerk/nextjs` v5 added to dependencies

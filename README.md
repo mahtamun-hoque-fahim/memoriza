@@ -148,3 +148,49 @@ CREATE INDEX idx_countdowns_event_date ON countdowns(event_date);
 - **Phase 2** ✅ — OG images, flip animation, Upstash rate limiting, light/dark mode
 - **Phase 3** — Edit/delete via email token, cover images, QR codes
 - **Phase 4** — Clerk auth, dashboard, custom slugs, reminders
+
+---
+
+## Phase 4 — Auth, Dashboard, Custom Slugs, Reminders
+
+### New env vars required
+
+```bash
+# Clerk
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
+CLERK_SECRET_KEY=sk_test_...
+NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
+NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/dashboard
+NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/dashboard
+
+# Cron protection
+CRON_SECRET=any-random-secret
+```
+
+### New routes
+
+| Route | Method | Auth | Description |
+|---|---|---|---|
+| `/dashboard` | GET | Clerk | User's countdown list |
+| `/sign-in` | GET | — | Clerk sign-in page |
+| `/sign-up` | GET | — | Clerk sign-up page |
+| `/api/dashboard` | GET | Clerk | Returns user's countdowns |
+| `/api/dashboard/[slug]` | PATCH | Clerk | Edit owned countdown |
+| `/api/dashboard/[slug]` | DELETE | Clerk | Delete owned countdown |
+| `/api/reminders` | POST | CRON_SECRET | Send reminder emails |
+| `/api/cron/cleanup` | POST | CRON_SECRET | Hard-delete old rows |
+
+### Cron jobs (vercel.json)
+
+| Endpoint | Schedule | Purpose |
+|---|---|---|
+| `/api/reminders` | Daily 08:00 UTC | 7d / 1d / day-of reminder emails |
+| `/api/cron/cleanup` | Sunday 03:00 UTC | Hard-delete rows soft-deleted > 1 year |
+
+### Limits
+
+| User type | Countdowns |
+|---|---|
+| Anonymous (IP-based) | 10 |
+| Signed-in (Clerk) | 50 |

@@ -1,5 +1,7 @@
 'use client'
 // components/countdown/EditForm.tsx
+// Phase 4: supports isAuthed mode (uses /api/dashboard/[slug]) and
+//          token mode (uses /api/countdown/[slug]/edit)
 
 import { useState, useTransition } from 'react'
 import { useRouter }               from 'next/navigation'
@@ -10,48 +12,51 @@ const EMOJI_OPTIONS = ['🎂','🎉','🚀','💍','🎓','🏖️','🎄','💼
 
 interface Props {
   slug:              string
-  token:             string
+  token:             string     // empty string when isAuthed = true
+  isAuthed:          boolean    // true = auth user, use /api/dashboard route
   initialName:       string
   initialEmoji:      string
-  initialDate:       string  // ISO UTC string
+  initialDate:       string     // ISO UTC
   initialTimezone:   string
   initialCoverImage: string | null
+  initialCustomSlug: string
+  initialReminders:  boolean
 }
 
 export function EditForm({
-  slug, token, initialName, initialEmoji,
-  initialDate, initialTimezone, initialCoverImage,
+  slug, token, isAuthed,
+  initialName, initialEmoji, initialDate, initialTimezone,
+  initialCoverImage, initialCustomSlug, initialReminders,
 }: Props) {
   const router = useRouter()
   const [savePending,   startSave]   = useTransition()
   const [deletePending, startDelete] = useTransition()
 
-  const [name,       setName]       = useState(initialName)
-  const [emoji,      setEmoji]      = useState(initialEmoji)
-  const [timezone,   setTimezone]   = useState(initialTimezone)
-  const [coverImage, setCoverImage] = useState<string | null>(initialCoverImage)
-  const [charLeft,   setCharLeft]   = useState(80 - initialName.length)
-
-  // Convert stored UTC date back to the creator's timezone for the input
-  const [date, setDate] = useState(
+  const [name,         setName]        = useState(initialName)
+  const [emoji,        setEmoji]       = useState(initialEmoji)
+  const [timezone,     setTimezone]    = useState(initialTimezone)
+  const [coverImage,   setCoverImage]  = useState<string | null>(initialCoverImage)
+  const [customSlug,   setCustomSlug]  = useState(initialCustomSlug)
+  const [reminders,    setReminders]   = useState(initialReminders)
+  const [charLeft,     setCharLeft]    = useState(80 - initialName.length)
+  const [date,         setDate]        = useState(
     () => toDatetimeLocalString(new Date(initialDate), initialTimezone)
   )
-
-  const [error,        setError]       = useState<string | null>(null)
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [error,              setError]              = useState<string | null>(null)
+  const [showDeleteConfirm,  setShowDeleteConfirm]  = useState(false)
 
   const minDate = new Date(Date.now() + 60_000).toISOString().slice(0, 16)
 
-  const inputStyle = {
+  const inputStyle: React.CSSProperties = {
     width: '100%', backgroundColor: 'var(--surface)',
     border: '1px solid var(--border)', borderRadius: '12px',
     padding: '12px 16px', color: 'var(--text)', fontSize: '14px',
     outline: 'none', transition: 'border-color 0.15s',
   }
-  const labelStyle = {
+  const labelStyle: React.CSSProperties = {
     display: 'block', fontSize: '11px',
     fontFamily: 'var(--font-jetbrains-mono)',
-    textTransform: 'uppercase' as const,
+    textTransform: 'uppercase',
     letterSpacing: '0.1em', color: 'var(--muted)', marginBottom: '8px',
   }
 
@@ -61,14 +66,25 @@ export function EditForm({
 
     startSave(async () => {
       try {
-        const res = await fetch(`/api/countdown/${slug}/edit`, {
+        const endpoint = isAuthed
+          ? `/api/dashboard/${slug}`
+          : `/api/countdown/${slug}/edit`
+
+        const body = isAuthed
+          ? { name, emoji: emoji || null, eventDate: date, timezone, coverImage, customSlug: customSlug || null, remindersEnabled: reminders }
+          : { token, name, emoji: emoji || null, eventDate: date, timezone, coverImage, remindersEnabled: reminders }
+
+        const res  = await fetch(endpoint, {
           method:  'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify({ token, name, emoji: emoji || null, eventDate: date, timezone, coverImage }),
+          body:    JSON.stringify(body),
         })
         const data = await res.json()
         if (!res.ok) { setError(data.error ?? 'Save failed'); return }
-        router.push(`/c/${slug}?updated=1`)
+
+        // If slug changed (custom slug set), redirect to new URL
+        const newSlug = data.slug ?? slug
+        router.push(`/c/${newSlug}?updated=1`)
       } catch {
         setError('Network error. Please try again.')
       }
@@ -78,14 +94,18 @@ export function EditForm({
   async function handleDelete() {
     startDelete(async () => {
       try {
-        const res = await fetch(`/api/countdown/${slug}/delete`, {
+        const endpoint = isAuthed
+          ? `/api/dashboard/${slug}`
+          : `/api/countdown/${slug}/delete`
+
+        const res = await fetch(endpoint, {
           method:  'DELETE',
           headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify({ token }),
+          body:    isAuthed ? undefined : JSON.stringify({ token }),
         })
         const data = await res.json()
         if (!res.ok) { setError(data.error ?? 'Delete failed'); return }
-        router.push('/?deleted=1')
+        router.push(isAuthed ? '/dashboard?deleted=1' : '/?deleted=1')
       } catch {
         setError('Network error. Please try again.')
       }
@@ -102,8 +122,8 @@ export function EditForm({
           {EMOJI_OPTIONS.map((e) => (
             <button key={e} type="button" onClick={() => setEmoji(emoji === e ? '' : e)}
               style={{
-                fontSize: '20px', width: '38px', height: '38px', borderRadius: '10px',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                fontSize: '20px', width: '38px', height: '38px', borderRadius: '10px', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
                 border: `1px solid ${emoji === e ? 'var(--accent)' : 'var(--border)'}`,
                 backgroundColor: emoji === e ? 'rgba(108,99,255,0.12)' : 'var(--bg)',
                 transition: 'all 0.15s',
@@ -130,7 +150,7 @@ export function EditForm({
 
       {/* Date */}
       <div>
-        <label style={labelStyle}>Date & time *</label>
+        <span style={labelStyle}>Date & time *</span>
         <input type="datetime-local" value={date} min={minDate} required
           onChange={(e) => setDate(e.target.value)}
           style={{ ...inputStyle, colorScheme: 'dark' }} />
@@ -138,7 +158,7 @@ export function EditForm({
 
       {/* Timezone */}
       <div>
-        <label style={labelStyle}>Timezone *</label>
+        <span style={labelStyle}>Timezone *</span>
         <select value={timezone} required onChange={(e) => setTimezone(e.target.value)}
           style={{ ...inputStyle, cursor: 'pointer' }}>
           {!COMMON_TIMEZONES.find((tz) => tz.value === timezone) && (
@@ -149,6 +169,51 @@ export function EditForm({
           ))}
         </select>
       </div>
+
+      {/* Custom slug — auth users only */}
+      {isAuthed && (
+        <div>
+          <span style={labelStyle}>Custom slug (optional)</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 0, border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden', backgroundColor: 'var(--surface)' }}>
+            <span style={{ padding: '12px 12px', color: 'var(--muted)', fontSize: '13px', fontFamily: 'var(--font-jetbrains-mono)', borderRight: '1px solid var(--border)', whiteSpace: 'nowrap' }}>
+              /c/
+            </span>
+            <input
+              type="text"
+              value={customSlug}
+              onChange={(e) => setCustomSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 64))}
+              placeholder="my-event"
+              style={{ ...inputStyle, border: 'none', borderRadius: 0, flex: 1 }}
+            />
+          </div>
+          <p style={{ marginTop: '5px', fontSize: '11px', color: 'var(--muted)' }}>
+            Lowercase letters, numbers, and hyphens only.
+          </p>
+        </div>
+      )}
+
+      {/* Reminders */}
+      <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}>
+        <div style={{ position: 'relative', width: '36px', height: '20px', flexShrink: 0 }}>
+          <input type="checkbox" checked={reminders} onChange={(e) => setReminders(e.target.checked)}
+            style={{ position: 'absolute', opacity: 0, width: '100%', height: '100%', cursor: 'pointer', margin: 0 }} />
+          <div style={{
+            width: '36px', height: '20px', borderRadius: '10px', transition: 'background 0.2s',
+            backgroundColor: reminders ? 'var(--accent)' : 'var(--border)',
+          }} />
+          <div style={{
+            position: 'absolute', top: '2px', left: reminders ? '18px' : '2px',
+            width: '16px', height: '16px', borderRadius: '50%', backgroundColor: '#fff',
+            transition: 'left 0.2s', pointerEvents: 'none',
+          }} />
+        </div>
+        <div>
+          <span style={{ fontSize: '13px', color: 'var(--text)', fontWeight: 500 }}>Email reminders</span>
+          <p style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '2px' }}>
+            Get notified 7 days, 1 day, and on the day of the event.
+          </p>
+        </div>
+      </label>
 
       {/* Error */}
       {error && (
@@ -178,8 +243,7 @@ export function EditForm({
       {!showDeleteConfirm ? (
         <button type="button" onClick={() => setShowDeleteConfirm(true)}
           style={{
-            width: '100%', padding: '12px',
-            backgroundColor: 'transparent', color: '#F87171',
+            width: '100%', padding: '12px', backgroundColor: 'transparent', color: '#F87171',
             fontFamily: 'var(--font-mono)', fontSize: '13px',
             border: '1px solid rgba(248,113,113,0.25)', borderRadius: '12px',
             cursor: 'pointer', transition: 'all 0.15s', letterSpacing: '0.04em',

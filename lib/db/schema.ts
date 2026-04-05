@@ -5,53 +5,64 @@ import {
   varchar,
   timestamp,
   integer,
+  boolean,
   index,
 } from 'drizzle-orm/pg-core'
 
 export const countdowns = pgTable(
   'countdowns',
   {
-    // Primary key
-    id: uuid('id').primaryKey().defaultRandom(),
+    // ── Identity ────────────────────────────────────────────────────────
+    id:   uuid('id').primaryKey().defaultRandom(),
 
-    // Public identifier — used in shareable URLs (/c/[slug])
-    slug: varchar('slug', { length: 16 }).notNull().unique(),
+    // Public share slug — used in /c/[slug]
+    // Phase 4: can be custom (e.g. "fahims-wedding") or auto-generated (10 chars)
+    slug: varchar('slug', { length: 64 }).notNull().unique(),
 
-    // Event details
+    // Phase 4: custom slug chosen by user (null = auto-generated)
+    customSlug: varchar('custom_slug', { length: 64 }).unique(),
+
+    // ── Event details ───────────────────────────────────────────────────
     name:     varchar('name',     { length: 80 }).notNull(),
     emoji:    varchar('emoji',    { length: 8  }),
     timezone: varchar('timezone', { length: 64 }).notNull(),
-
-    // The actual target moment (stored as UTC)
     eventDate: timestamp('event_date', { withTimezone: true }).notNull(),
 
-    // Phase 3: optional Cloudinary CDN URL for cover image
+    // Phase 3: Cloudinary CDN URL
     coverImage: varchar('cover_image', { length: 512 }),
 
-    // Phase 3: creator email — used only to send the edit link, never displayed
+    // ── Auth ────────────────────────────────────────────────────────────
+    // Phase 4: Clerk user ID (null = anonymous / IP-based)
+    userId: varchar('user_id', { length: 64 }),
+
+    // Phase 3: creator email + edit token (kept for anonymous users)
     creatorEmail: varchar('creator_email', { length: 254 }),
+    editToken:    varchar('edit_token',    { length: 64  }),
 
-    // Phase 3: edit/delete token (SHA-256 hex, 64 chars)
-    // Sent to creator email. Anyone with the token can edit or delete.
-    editToken: varchar('edit_token', { length: 64 }),
+    // ── Reminders ───────────────────────────────────────────────────────
+    // Phase 4: whether to send reminder emails
+    remindersEnabled: boolean('reminders_enabled').default(false).notNull(),
+    // Track which reminders have been sent (comma-separated: "7d,1d,day")
+    remindersSent: varchar('reminders_sent', { length: 32 }).default('').notNull(),
 
-    // Phase 3: view counter — incremented on every page visit
+    // ── Stats ───────────────────────────────────────────────────────────
     viewCount: integer('view_count').default(0).notNull(),
 
-    // Rate-limiting: SHA-256 hash of creator IP + salt
+    // ── Rate limiting ───────────────────────────────────────────────────
+    // Hash of creator IP — used for anon rate limiting only
     ipHash: varchar('ip_hash', { length: 64 }).notNull(),
 
-    // Soft-delete (null = active)
+    // ── Housekeeping ────────────────────────────────────────────────────
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
-
-    // Housekeeping
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => ({
-    slugIdx:      index('idx_countdowns_slug').on(table.slug),
-    ipHashIdx:    index('idx_countdowns_ip_hash').on(table.ipHash),
-    eventDateIdx: index('idx_countdowns_event_date').on(table.eventDate),
-    editTokenIdx: index('idx_countdowns_edit_token').on(table.editToken),
+    slugIdx:        index('idx_countdowns_slug').on(table.slug),
+    customSlugIdx:  index('idx_countdowns_custom_slug').on(table.customSlug),
+    userIdIdx:      index('idx_countdowns_user_id').on(table.userId),
+    ipHashIdx:      index('idx_countdowns_ip_hash').on(table.ipHash),
+    eventDateIdx:   index('idx_countdowns_event_date').on(table.eventDate),
+    editTokenIdx:   index('idx_countdowns_edit_token').on(table.editToken),
   })
 )
 
