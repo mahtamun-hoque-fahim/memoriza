@@ -127,3 +127,26 @@
 - Custom emoji / cover image (Cloudinary)
 - QR code generation
 - View counters
+
+### Phase 3 (current)
+- Email capture (optional) at creation → Resend sends private edit link (graceful no-op without `RESEND_API_KEY`)
+- Edit page `/c/[slug]/edit?token=...` — server validates 64-char token, pre-fills form
+- `EditForm` client component — save + delete with confirmation, token in request body
+- Soft-delete on delete — `deleted_at` timestamp, row preserved for analytics
+- Cover image: `CoverImageUploader` — drag-and-drop, click-to-browse, 5 MB limit, Cloudinary signed upload
+- Cover image displayed as hero on countdown page (`next/image`, Cloudinary CDN)
+- QR code: `QRCode` component — popover with `api.qrserver.com`, Download PNG button
+- View counter: `ViewCounter` fires fire-and-forget `POST /api/countdown/[slug]/view` on mount
+- `/api/countdown/[slug]/edit`   — PATCH, Node.js runtime, token-validated
+- `/api/countdown/[slug]/delete` — DELETE, Node.js runtime, token-validated  
+- `/api/countdown/[slug]/view`   — POST, Edge runtime, SQL atomic increment
+- `/api/upload`                  — POST, Node.js runtime, Cloudinary signed upload
+- `lib/email.ts`                 — Resend email via `fetch`, branded HTML template
+- Schema: added `cover_image`, `creator_email`, `edit_token`, `view_count` columns
+- Edit links exposed on countdown page only when `editToken` exists in DB row
+
+### Phase 4 (planned)
+- Clerk auth — dashboard of all your countdowns
+- Custom slugs (e.g. `/c/fahims-wedding`)
+- Reminder emails at 7d / 1d / day-of via Resend + Vercel cron
+- Cleanup cron — hard-delete soft-deleted rows older than 1 year

@@ -77,3 +77,36 @@ export const COMMON_TIMEZONES = [
   { label: 'Tokyo (GMT+9)',           value: 'Asia/Tokyo'          },
   { label: 'Sydney (GMT+10/+11)',    value: 'Australia/Sydney'    },
 ]
+
+// ── Edit token generation ─────────────────────────────────────────────────────
+// 32 random bytes → 64-char hex string. Stored in DB, emailed to creator.
+export function generateEditToken(): string {
+  if (typeof globalThis.crypto !== 'undefined' && globalThis.crypto.getRandomValues) {
+    const bytes = globalThis.crypto.getRandomValues(new Uint8Array(32))
+    return Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join('')
+  }
+  const { randomBytes } = require('crypto')
+  return (randomBytes(32) as Buffer).toString('hex')
+}
+
+// ── Format event date for datetime-local input ────────────────────────────────
+// Converts a UTC Date to the "YYYY-MM-DDTHH:mm" string that datetime-local needs.
+export function toDatetimeLocalString(date: Date, timezone: string): string {
+  try {
+    // Format in target timezone so the input shows the creator's local time
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone:  timezone,
+      year:      'numeric',
+      month:     '2-digit',
+      day:       '2-digit',
+      hour:      '2-digit',
+      minute:    '2-digit',
+      hour12:    false,
+    }).formatToParts(date)
+
+    const get = (type: string) => parts.find((p) => p.type === type)?.value ?? '00'
+    return `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}`
+  } catch {
+    return date.toISOString().slice(0, 16)
+  }
+}

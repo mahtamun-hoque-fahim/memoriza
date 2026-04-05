@@ -1,30 +1,30 @@
 'use client'
-// components/countdown/CreateForm.tsx
+// components/countdown/CreateForm.tsx — Phase 3: adds email + cover image
 
-import { useState, useTransition, useRef } from 'react'
-import { useRouter }                        from 'next/navigation'
-import { createCountdownSchema }            from '@/lib/validations'
-import { COMMON_TIMEZONES }                 from '@/lib/utils'
+import { useState, useTransition } from 'react'
+import { useRouter }               from 'next/navigation'
+import { createCountdownSchema }   from '@/lib/validations'
+import { COMMON_TIMEZONES }        from '@/lib/utils'
+import { CoverImageUploader }      from './CoverImageUploader'
 
-const EMOJI_OPTIONS = ['🎂', '🎉', '🚀', '💍', '🎓', '🏖️', '🎄', '💼', '🎮', '❤️', '🌟', '🎯']
+const EMOJI_OPTIONS = ['🎂','🎉','🚀','💍','🎓','🏖️','🎄','💼','🎮','❤️','🌟','🎯']
 
 export function CreateForm() {
-  const router      = useRouter()
+  const router = useRouter()
   const [pending, startTransition] = useTransition()
 
-  const [name,     setName]     = useState('')
-  const [emoji,    setEmoji]    = useState('')
-  const [date,     setDate]     = useState('')
-  const [timezone, setTimezone] = useState(
+  const [name,         setName]         = useState('')
+  const [emoji,        setEmoji]        = useState('')
+  const [date,         setDate]         = useState('')
+  const [timezone,     setTimezone]     = useState(
     () => Intl.DateTimeFormat().resolvedOptions().timeZone ?? 'UTC'
   )
-  const [error,    setError]    = useState<string | null>(null)
-  const [charLeft, setCharLeft] = useState(80)
+  const [email,        setEmail]        = useState('')
+  const [coverImage,   setCoverImage]   = useState<string | null>(null)
+  const [error,        setError]        = useState<string | null>(null)
+  const [charLeft,     setCharLeft]     = useState(80)
 
-  // Minimum datetime for the picker — now + 1 minute
-  const minDate = new Date(Date.now() + 60_000)
-    .toISOString()
-    .slice(0, 16)
+  const minDate = new Date(Date.now() + 60_000).toISOString().slice(0, 16)
 
   function handleNameChange(e: React.ChangeEvent<HTMLInputElement>) {
     const val = e.target.value.slice(0, 80)
@@ -36,8 +36,10 @@ export function CreateForm() {
     e.preventDefault()
     setError(null)
 
-    // Client-side validation first
-    const result = createCountdownSchema.safeParse({ name, emoji: emoji || null, eventDate: date, timezone })
+    const result = createCountdownSchema.safeParse({
+      name, emoji: emoji || null, eventDate: date, timezone,
+      creatorEmail: email || null, coverImage: coverImage || null,
+    })
     if (!result.success) {
       setError(result.error.errors[0]?.message ?? 'Please check your inputs')
       return
@@ -48,16 +50,14 @@ export function CreateForm() {
         const res = await fetch('/api/create', {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify({ name, emoji: emoji || null, eventDate: date, timezone }),
+          body:    JSON.stringify({
+            name, emoji: emoji || null, eventDate: date, timezone,
+            creatorEmail: email || null, coverImage: coverImage || null,
+          }),
         })
 
         const data = await res.json()
-
-        if (!res.ok) {
-          setError(data.error ?? 'Something went wrong. Please try again.')
-          return
-        }
-
+        if (!res.ok) { setError(data.error ?? 'Something went wrong.'); return }
         router.push(`/c/${data.slug}?new=1`)
       } catch {
         setError('Network error. Please check your connection and try again.')
@@ -65,154 +65,145 @@ export function CreateForm() {
     })
   }
 
-  return (
-    <form onSubmit={handleSubmit} className="w-full max-w-lg mx-auto space-y-5">
+  const inputStyle = {
+    width: '100%',
+    backgroundColor: 'var(--surface)',
+    border: '1px solid var(--border)',
+    borderRadius: '12px',
+    padding: '12px 16px',
+    color: 'var(--text)',
+    fontSize: '14px',
+    outline: 'none',
+    transition: 'border-color 0.15s',
+  }
 
-      {/* ── Emoji picker ─────────────────────────────────────────────────── */}
+  const labelStyle = {
+    display: 'block',
+    fontSize: '11px',
+    fontFamily: 'var(--font-jetbrains-mono)',
+    textTransform: 'uppercase' as const,
+    letterSpacing: '0.1em',
+    color: 'var(--muted)',
+    marginBottom: '8px',
+  }
+
+  return (
+    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+
+      {/* Emoji picker */}
       <div>
-        <label className="block text-xs font-mono uppercase tracking-widest text-brand-muted mb-2">
-          Pick an emoji (optional)
-        </label>
-        <div className="flex flex-wrap gap-2">
+        <span style={labelStyle}>Pick an emoji (optional)</span>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
           {EMOJI_OPTIONS.map((e) => (
             <button
-              key={e}
-              type="button"
+              key={e} type="button"
               onClick={() => setEmoji(emoji === e ? '' : e)}
-              className={`
-                text-2xl w-10 h-10 rounded-lg border transition-all duration-150 flex items-center justify-center
-                ${emoji === e
-                  ? 'border-brand-accent bg-brand-accent/10 scale-110'
-                  : 'border-brand-border bg-brand-surface hover:border-brand-accent/50 hover:scale-105'
-                }
-              `}
-              aria-label={`Select emoji ${e}`}
+              style={{
+                fontSize: '22px', width: '40px', height: '40px',
+                borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                border: `1px solid ${emoji === e ? 'var(--accent)' : 'var(--border)'}`,
+                backgroundColor: emoji === e ? 'rgba(108,99,255,0.12)' : 'var(--surface)',
+                transform: emoji === e ? 'scale(1.1)' : 'scale(1)',
+                transition: 'all 0.15s', cursor: 'pointer',
+              }}
+              aria-label={`Select ${e}`}
             >
               {e}
             </button>
           ))}
-          {emoji && !EMOJI_OPTIONS.includes(emoji) && (
-            <span className="text-2xl w-10 h-10 rounded-lg border border-brand-accent bg-brand-accent/10 flex items-center justify-center">
-              {emoji}
-            </span>
-          )}
         </div>
       </div>
 
-      {/* ── Event name ───────────────────────────────────────────────────── */}
+      {/* Event name */}
       <div>
-        <div className="flex items-center justify-between mb-2">
-          <label htmlFor="name" className="block text-xs font-mono uppercase tracking-widest text-brand-muted">
-            Event name *
-          </label>
-          <span className={`text-xs font-mono ${charLeft < 10 ? 'text-red-400' : 'text-brand-muted'}`}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+          <span style={labelStyle}>Event name *</span>
+          <span style={{ fontSize: '11px', fontFamily: 'var(--font-jetbrains-mono)', color: charLeft < 10 ? '#F87171' : 'var(--muted)' }}>
             {charLeft}
           </span>
         </div>
         <input
-          id="name"
-          type="text"
-          value={name}
-          onChange={handleNameChange}
-          placeholder="My Birthday 🎂"
-          required
-          maxLength={80}
-          className="
-            w-full bg-brand-surface border border-brand-border rounded-xl
-            px-4 py-3 text-brand-text placeholder:text-brand-muted
-            transition-colors duration-150
-            hover:border-brand-accent/40
-          "
+          type="text" value={name} onChange={handleNameChange}
+          placeholder="My Birthday 🎂" required maxLength={80}
+          style={inputStyle}
         />
       </div>
 
-      {/* ── Date & time ──────────────────────────────────────────────────── */}
+      {/* Cover image */}
+      <CoverImageUploader value={coverImage} onChange={setCoverImage} />
+
+      {/* Date & time */}
       <div>
-        <label htmlFor="date" className="block text-xs font-mono uppercase tracking-widest text-brand-muted mb-2">
-          Date & time *
-        </label>
+        <label style={labelStyle} htmlFor="date">Date & time *</label>
         <input
-          id="date"
-          type="datetime-local"
-          value={date}
-          min={minDate}
-          onChange={(e) => setDate(e.target.value)}
-          required
-          className="
-            w-full bg-brand-surface border border-brand-border rounded-xl
-            px-4 py-3 text-brand-text
-            transition-colors duration-150
-            hover:border-brand-accent/40
-            [color-scheme:dark]
-          "
+          id="date" type="datetime-local" value={date} min={minDate}
+          onChange={(e) => setDate(e.target.value)} required
+          style={{ ...inputStyle, colorScheme: 'dark' }}
         />
       </div>
 
-      {/* ── Timezone ─────────────────────────────────────────────────────── */}
+      {/* Timezone */}
       <div>
-        <label htmlFor="timezone" className="block text-xs font-mono uppercase tracking-widest text-brand-muted mb-2">
-          Timezone *
-        </label>
+        <label style={labelStyle} htmlFor="timezone">Timezone *</label>
         <select
-          id="timezone"
-          value={timezone}
-          onChange={(e) => setTimezone(e.target.value)}
-          required
-          className="
-            w-full bg-brand-surface border border-brand-border rounded-xl
-            px-4 py-3 text-brand-text
-            transition-colors duration-150
-            hover:border-brand-accent/40
-            cursor-pointer
-          "
+          id="timezone" value={timezone}
+          onChange={(e) => setTimezone(e.target.value)} required
+          style={{ ...inputStyle, cursor: 'pointer' }}
         >
-          {/* Show detected timezone first if not in list */}
           {!COMMON_TIMEZONES.find((tz) => tz.value === timezone) && (
             <option value={timezone}>{timezone} (detected)</option>
           )}
           {COMMON_TIMEZONES.map((tz) => (
-            <option key={tz.value} value={tz.value}>
-              {tz.label}
-            </option>
+            <option key={tz.value} value={tz.value}>{tz.label}</option>
           ))}
         </select>
       </div>
 
-      {/* ── Error ────────────────────────────────────────────────────────── */}
+      {/* Email — optional, for edit link */}
+      <div>
+        <label style={labelStyle} htmlFor="email">
+          Your email <span style={{ opacity: 0.5, textTransform: 'none', letterSpacing: 0 }}>— optional, to get an edit link</span>
+        </label>
+        <input
+          id="email" type="email" value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="you@example.com"
+          style={inputStyle}
+        />
+        {email && (
+          <p style={{ marginTop: '6px', fontSize: '11px', color: 'var(--muted)' }}>
+            We'll send a private link to edit or delete this countdown. We don't store your email anywhere else.
+          </p>
+        )}
+      </div>
+
+      {/* Error */}
       {error && (
-        <div className="flex items-start gap-3 bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3">
-          <span className="text-red-400 text-sm leading-relaxed">{error}</span>
+        <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: '12px', padding: '12px 16px' }}>
+          <p style={{ color: '#F87171', fontSize: '13px', lineHeight: 1.6 }}>{error}</p>
         </div>
       )}
 
-      {/* ── Submit ───────────────────────────────────────────────────────── */}
+      {/* Submit */}
       <button
-        type="submit"
-        disabled={pending || !name || !date}
-        className="
-          w-full bg-brand-accent text-white font-syne font-semibold
-          py-4 rounded-xl text-base
-          transition-all duration-200
-          hover:bg-brand-accent/90 hover:scale-[1.01]
-          active:scale-[0.99]
-          disabled:opacity-40 disabled:cursor-not-allowed disabled:scale-100
-          animate-pulse-glow
-        "
+        type="submit" disabled={pending || !name || !date}
+        className="animate-pulse-glow"
+        style={{
+          width: '100%', padding: '16px',
+          backgroundColor: 'var(--accent)',
+          color: '#fff',
+          fontFamily: 'var(--font-syne)',
+          fontWeight: 600, fontSize: '15px',
+          borderRadius: '12px', border: 'none',
+          cursor: pending || !name || !date ? 'not-allowed' : 'pointer',
+          opacity: pending || !name || !date ? 0.4 : 1,
+          transition: 'all 0.2s',
+        }}
       >
-        {pending ? (
-          <span className="flex items-center justify-center gap-2">
-            <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-            </svg>
-            Creating…
-          </span>
-        ) : (
-          '→ Create countdown'
-        )}
+        {pending ? 'Creating…' : '→ Create countdown'}
       </button>
 
-      <p className="text-center text-xs text-brand-muted">
+      <p style={{ textAlign: 'center', fontSize: '11px', color: 'var(--muted)', fontFamily: 'var(--font-jetbrains-mono)' }}>
         Free · No account needed · Up to 10 countdowns per device
       </p>
     </form>

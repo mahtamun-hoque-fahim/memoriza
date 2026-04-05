@@ -1,8 +1,14 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Keep images optimized on Vercel; if deploying to Cloudflare Pages swap to: unoptimized: true
   images: {
-    remotePatterns: [],
+    remotePatterns: [
+      // Cloudinary CDN — for uploaded cover images
+      {
+        protocol: 'https',
+        hostname: 'res.cloudinary.com',
+        pathname: '/**',
+      },
+    ],
   },
 }
 

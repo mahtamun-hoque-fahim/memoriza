@@ -1,6 +1,7 @@
 // lib/validations.ts
 import { z } from 'zod'
 
+// ── Create ────────────────────────────────────────────────────────────────────
 export const createCountdownSchema = z.object({
   name: z
     .string()
@@ -8,28 +9,54 @@ export const createCountdownSchema = z.object({
     .max(80, 'Event name must be 80 characters or less')
     .trim(),
 
-  emoji: z
-    .string()
-    .max(8, 'Emoji too long')
-    .optional()
-    .nullable(),
+  emoji: z.string().max(8).optional().nullable(),
 
-  // ISO 8601 string from datetime-local input
   eventDate: z
     .string()
     .min(1, 'Event date is required')
-    .refine((val) => {
-      const d = new Date(val)
-      return !isNaN(d.getTime())
-    }, 'Invalid date format')
-    .refine((val) => {
-      return new Date(val).getTime() > Date.now()
-    }, 'Event date must be in the future'),
+    .refine((v) => !isNaN(new Date(v).getTime()), 'Invalid date')
+    .refine((v) => new Date(v).getTime() > Date.now(), 'Event date must be in the future'),
 
-  timezone: z
+  timezone: z.string().min(1).max(64),
+
+  // Phase 3 additions
+  creatorEmail: z
     .string()
-    .min(1, 'Timezone is required')
-    .max(64, 'Invalid timezone'),
+    .email('Invalid email address')
+    .max(254)
+    .optional()
+    .nullable(),
+
+  coverImage: z.string().url().max(512).optional().nullable(),
 })
 
 export type CreateCountdownInput = z.infer<typeof createCountdownSchema>
+
+// ── Edit ──────────────────────────────────────────────────────────────────────
+export const editCountdownSchema = z.object({
+  token: z.string().length(64, 'Invalid edit token'),
+
+  name: z
+    .string()
+    .min(1, 'Event name is required')
+    .max(80)
+    .trim(),
+
+  emoji:    z.string().max(8).optional().nullable(),
+  timezone: z.string().min(1).max(64),
+
+  eventDate: z
+    .string()
+    .min(1, 'Event date is required')
+    .refine((v) => !isNaN(new Date(v).getTime()), 'Invalid date')
+    .refine((v) => new Date(v).getTime() > Date.now(), 'Event date must be in the future'),
+
+  coverImage: z.string().url().max(512).optional().nullable(),
+})
+
+export type EditCountdownInput = z.infer<typeof editCountdownSchema>
+
+// ── Delete ────────────────────────────────────────────────────────────────────
+export const deleteCountdownSchema = z.object({
+  token: z.string().length(64, 'Invalid edit token'),
+})
