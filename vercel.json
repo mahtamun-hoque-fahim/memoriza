@@ -1,12 +1,9 @@
 {
+  "framework": "nextjs",
   "crons": [
     {
-      "path":     "/api/reminders",
+      "path":     "/api/cron/reminders",
       "schedule": "0 8 * * *"
-    },
-    {
-      "path":     "/api/cron/cleanup",
-      "schedule": "0 3 * * 0"
     }
   ]
 }
