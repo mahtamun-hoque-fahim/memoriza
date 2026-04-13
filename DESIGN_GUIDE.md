@@ -1,4 +1,4 @@
-# DESIGN_GUIDE.md — Countdown App
+# DESIGN_GUIDE.md — Memoriza
 
 > **Rule:** Update this file with every UI/design change. This is the single source of truth.
 
@@ -6,165 +6,106 @@
 
 ## Brand & Identity
 
-- **App name:** Countdown
-- **Tagline:** Share the moment
-- **Voice:** Minimal, celebratory, friendly. No corporate tone.
+- **App name:** Memoriza
+- **Tagline:** Never forget what matters most.
+- **Voice:** Warm, celebratory, personal. Not corporate, not cold.
 
 ---
 
 ## Color System
 
-| Token            | Hex       | Usage                              |
-|------------------|-----------|------------------------------------|
-| `brand-bg`       | `#0A0C10` | Page background                    |
-| `brand-surface`  | `#131720` | Cards, inputs, form containers     |
-| `brand-border`   | `#1E2433` | All borders and dividers           |
-| `brand-accent`   | `#6C63FF` | CTA buttons, highlights, links     |
-| `brand-accent-dim` | `#3D3880` | Hover states, dimmed accent      |
-| `brand-text`     | `#F2F2F5` | Primary text                       |
-| `brand-muted`    | `#6B7280` | Labels, captions, secondary text   |
+| Token              | Hex       | CSS Var            | Usage                              |
+|--------------------|-----------|--------------------|------------------------------------|
+| Background         | `#0A0C10` | `--bg`             | Page background                    |
+| Surface            | `#131720` | `--surface`        | Cards, inputs, containers          |
+| Surface raised     | `#1A2030` | `--surface-raised` | Hover cards, nested containers     |
+| Border             | `#1E2433` | `--border`         | All borders and dividers           |
+| Accent             | `#6C63FF` | `--accent`         | CTA buttons, highlights, links     |
+| Accent dim         | `#3D3880` | `--accent-dim`     | Hover on accent elements           |
+| Text primary       | `#F2F2F5` | `--text`           | Primary text                       |
+| Text muted         | `#6B7280` | `--muted`          | Labels, captions, secondary text   |
+| Success            | `#10B981` | `--success`        | Delivered badge, active state      |
+| Warning            | `#F59E0B` | `--warning`        | Reminder pending state             |
+| Danger             | `#EF4444` | `--danger`         | Delete actions, errors             |
 
-**Theme:** Dark-first. No light mode in Phase 1.
+**Theme:** Dark-only. No light mode.
 
 ---
 
 ## Typography
 
-| Role             | Font                 | Size / Weight          | Usage                          |
-|------------------|----------------------|------------------------|--------------------------------|
-| Countdown digits | Instrument Serif     | 80–120px / 400         | The hero — days/hours/min/sec  |
-| Event name / H1  | Syne                 | 22–48px / 600–700      | Page headings, event titles    |
-| UI / body        | DM Sans              | 14–16px / 400          | Form labels, paragraphs        |
-| Labels / mono    | JetBrains Mono       | 11–12px / 400          | DAYS, HRS, MIN, SEC labels     |
+| Role             | Font                | Size / Weight      | Usage                               |
+|------------------|---------------------|--------------------|-------------------------------------|
+| Countdown digits | Instrument Serif    | 80–120px / 400     | Hero countdown numbers              |
+| Headings / H1    | Syne                | 22–48px / 600–700  | Page headings, event titles         |
+| UI / body        | DM Sans             | 14–16px / 400      | Form labels, paragraphs, dashboard  |
+| Mono labels      | JetBrains Mono      | 11–12px / 400      | DAYS, HRS, unit labels, badges      |
+
+---
+
+## Occasion Themes (countdown page)
+
+Each occasion controls: background tint, accent color override, emoji/icon, animation style.
+
+| Occasion      | Accent color | Background tint         | Icon  |
+|---------------|-------------|-------------------------|-------|
+| anniversary   | `#FF6B9D`   | rose/pink tint          | 💍    |
+| birthday      | `#F59E0B`   | warm amber tint         | 🎂    |
+| valentine     | `#EF4444`   | red tint                | 💝    |
+| graduation    | `#10B981`   | green tint              | 🎓    |
+| new_year      | `#6C63FF`   | purple (default)        | 🎆    |
+| first_date    | `#EC4899`   | pink tint               | 🌹    |
+| promotion     | `#3B82F6`   | blue tint               | 🏆    |
+| custom        | `#6C63FF`   | purple (default)        | ✨    |
 
 ---
 
 ## Component Patterns
 
 ### Inputs
-- Background: `brand-surface`
-- Border: `brand-border` → hover: `brand-accent/40`
+- Background: `--surface`
+- Border: `--border` → focus: `--accent/60` ring
 - Border-radius: `rounded-xl` (12px)
 - Padding: `px-4 py-3`
-- Focus ring: 2px solid `rgba(108,99,255,0.6)`
 
 ### Buttons (primary)
-- Background: `brand-accent` → hover: `brand-accent/90`
+- Background: `--accent` → hover: `--accent-dim`
 - Text: white, Syne, font-semibold
 - Border-radius: `rounded-xl`
-- Hover: slight scale-up (`scale-[1.01]`)
 - Disabled: `opacity-40`
 
-### Cards / containers
-- Background: `brand-surface`
-- Border: `brand-border`
-- Border-radius: `rounded-2xl` (16px)
-- Padding: `p-6 sm:p-8`
+### Cards
+- Background: `--surface`
+- Border: `1px solid --border`
+- Border-radius: `rounded-2xl`
+- Padding: `p-6`
 
-### Countdown segments
-- Font: Instrument Serif (serif variable)
-- Sizes: `text-5xl sm:text-7xl md:text-8xl lg:text-9xl`
-- Tick animation: `tick-glow` keyframe (accent → lighter → text color, 0.4s)
-- Labels: JetBrains Mono, 9–11px, uppercase, `tracking-[0.2em]`, `text-brand-muted`
+### Badges
+- `rounded-full px-2.5 py-0.5 text-xs font-mono uppercase tracking-wider`
+- Colors: success/warning/danger/accent at 15% opacity with matching text
 
 ---
 
-## Animations
+## Layout
 
-| Name          | Duration | Trigger                      |
-|---------------|----------|------------------------------|
-| `slide-up`    | 0.5s     | Page load, form card entry   |
-| `fade-in`     | 0.4s     | Share bar, footer hints      |
-| `tick-glow`   | 0.4s     | Every second tick on digits  |
-| `pulse-glow`  | 3s loop  | CTA button idle state        |
+- Max content width: `max-w-5xl` (dashboard), `max-w-lg` (forms), `max-w-3xl` (countdown page)
+- Navbar height: `56px` → body has `pt-14`
+- Spacing scale: 4, 8, 12, 16, 24, 32, 48px
 
 ---
 
-## Rate Limiting
+## Email Templates
 
-- **Limit:** 10 active countdowns per IP address (hashed with SHA-256 + `IP_SALT`)
-- **Error code:** `LIMIT_REACHED` (HTTP 429)
-- **User message:** "You've reached the limit of 10 active countdowns. Delete one to create a new one."
-- No Clerk auth in Phase 1. Limit is IP-based only.
-
----
-
-## URL Structure
-
-| Path              | Component       | Notes                              |
-|-------------------|-----------------|------------------------------------|
-| `/`               | HomePage        | Creation form                      |
-| `/c/[slug]`       | CountdownPage   | Live countdown, SSR + client timer |
-| `/api/create`     | Route Handler   | POST, Node.js runtime              |
-| `/api/c/[slug]`   | Route Handler   | GET, Edge runtime                  |
+- Background: `#0A0C10`
+- Card: `#131720` with `1px solid #1E2433` border, `border-radius: 16px`
+- Accent: `#6C63FF`
+- Max width: `560px`
+- Font: system-ui / -apple-system stack
 
 ---
 
-## Phase Log
+## Change Log
 
-### Phase 1 (current)
-- Core creation + countdown display
-- IP-based 10-event limit (SHA-256 hashed)
-- Copy-to-clipboard share bar
-- Web Share API (mobile)
-- Finished state with confetti
-- 404 page for unknown slugs
-- SSR data fetch + client-side live timer
-- Dark theme only
-
-### Phase 2 (current)
-- Dynamic OG images via `@vercel/og` at `/api/og/[slug]` (1200×630, shows emoji + event name + days left)
-- Twitter card `summary_large_image` meta tags on countdown pages
-- CSS flip animation on digit change (`.flip-card.is-flipping`, 0.18s ease-in/out)
-- Light mode support — CSS variables on `:root` / `html:not(.dark)`, toggled by ThemeProvider
-- ThemeToggle component (sun/moon icon) — persists to `localStorage`
-- Persistent Navbar with logo + theme toggle + "New" link
-- Upstash Redis rate limiting on `/api/create` (5 req / 10 min / IP, graceful degradation if not configured)
-- `suppressHydrationWarning` on `<html>` to prevent theme flash warning
-
-### Phase 3 (planned)
-- Email-based edit/delete token
-- Custom emoji / cover image (Cloudinary)
-- QR code generation
-- View counters
-
-### Phase 3 (current)
-- Email capture (optional) at creation → Resend sends private edit link (graceful no-op without `RESEND_API_KEY`)
-- Edit page `/c/[slug]/edit?token=...` — server validates 64-char token, pre-fills form
-- `EditForm` client component — save + delete with confirmation, token in request body
-- Soft-delete on delete — `deleted_at` timestamp, row preserved for analytics
-- Cover image: `CoverImageUploader` — drag-and-drop, click-to-browse, 5 MB limit, Cloudinary signed upload
-- Cover image displayed as hero on countdown page (`next/image`, Cloudinary CDN)
-- QR code: `QRCode` component — popover with `api.qrserver.com`, Download PNG button
-- View counter: `ViewCounter` fires fire-and-forget `POST /api/countdown/[slug]/view` on mount
-- `/api/countdown/[slug]/edit`   — PATCH, Node.js runtime, token-validated
-- `/api/countdown/[slug]/delete` — DELETE, Node.js runtime, token-validated  
-- `/api/countdown/[slug]/view`   — POST, Edge runtime, SQL atomic increment
-- `/api/upload`                  — POST, Node.js runtime, Cloudinary signed upload
-- `lib/email.ts`                 — Resend email via `fetch`, branded HTML template
-- Schema: added `cover_image`, `creator_email`, `edit_token`, `view_count` columns
-- Edit links exposed on countdown page only when `editToken` exists in DB row
-
-### Phase 4 (planned)
-- Clerk auth — dashboard of all your countdowns
-- Custom slugs (e.g. `/c/fahims-wedding`)
-- Reminder emails at 7d / 1d / day-of via Resend + Vercel cron
-- Cleanup cron — hard-delete soft-deleted rows older than 1 year
-
-### Phase 4 (current)
-- Clerk auth — `ClerkProvider` in layout, `clerkMiddleware` in middleware.ts
-- `/sign-in` and `/sign-up` pages with branded Clerk component appearances
-- `/dashboard` — server-side SSR, lists all user countdowns ordered by created_at desc
-- `DashboardClient` — interactive list, single-click confirm-delete, view/edit links, view counts, custom slug badges
-- Auth users: 50 countdowns limit (vs 10 for anon IP-based)
-- Auth users: no edit token needed — `/api/dashboard/[slug]` PATCH/DELETE checks `userId` ownership
-- Anonymous users: token-based edit still works unchanged
-- Edit page (`/c/[slug]/edit`) supports both access modes: Clerk session OR `?token=...`
-- `EditForm` extended: `isAuthed` prop, custom slug field (auth only), reminders toggle
-- Custom slugs: lowercase letters + numbers + hyphens, 3–64 chars, uniqueness enforced
-- Schema: added `user_id`, `custom_slug`, `reminders_enabled`, `reminders_sent` columns
-- `/api/reminders` cron — daily 08:00 UTC, sends 7d/1d/day-of emails via Resend
-- `/api/cron/cleanup` cron — weekly Sunday 03:00 UTC, hard-deletes rows soft-deleted > 1 year ago
-- `vercel.json` — declares both cron schedules
-- `CRON_SECRET` env var protects cron endpoints
-- `@clerk/nextjs` v5 added to dependencies
+| Date       | Change                         | Author |
+|------------|--------------------------------|--------|
+| 2026-04-13 | Initial design system for v2   | Fahim  |

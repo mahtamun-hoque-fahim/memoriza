@@ -1,13 +1,20 @@
-// lib/env.ts
-// Called at the top of any server-side file that needs these vars.
-// Throws early so you get a clear error instead of a silent undefined.
-
-const required = ['DATABASE_URL', 'DATABASE_URL_UNPOOLED'] as const
+// lib/env.ts — fail fast if required env vars are missing
+const required = [
+  'DATABASE_URL',
+  'DATABASE_URL_UNPOOLED',
+  'NEXTAUTH_SECRET',
+  'RESEND_API_KEY',
+  'RESEND_FROM_EMAIL',
+  'CLOUDINARY_CLOUD_NAME',
+  'CLOUDINARY_API_KEY',
+  'CLOUDINARY_API_SECRET',
+  'NEXT_PUBLIC_BASE_URL',
+  'CRON_SECRET',
+]
 
 export function validateEnv() {
-  for (const key of required) {
-    if (!process.env[key]) {
-      throw new Error(`[env] Missing required environment variable: ${key}`)
-    }
+  const missing = required.filter((k) => !process.env[k])
+  if (missing.length) {
+    throw new Error(`Missing required env vars: ${missing.join(', ')}`)
   }
 }

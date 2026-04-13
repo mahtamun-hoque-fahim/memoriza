@@ -1,37 +1,16 @@
-// app/not-found.tsx
 import Link from 'next/link'
 
 export default function NotFound() {
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center px-4 text-center gap-6">
-      <div
-        className="fixed top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] pointer-events-none"
-        style={{
-          background: 'radial-gradient(ellipse at center, rgba(108,99,255,0.08) 0%, transparent 70%)',
-        }}
-      />
-
-      <p className="font-mono text-xs text-brand-muted uppercase tracking-widest">404</p>
-
-      <h1 className="font-syne text-3xl sm:text-4xl font-bold text-brand-text">
-        Countdown not found
-      </h1>
-
-      <p className="text-brand-muted text-base max-w-sm leading-relaxed">
-        This countdown link doesn&apos;t exist or may have been deleted.
-        Double-check the URL or create a new one.
-      </p>
-
-      <Link
-        href="/"
-        className="
-          inline-flex items-center gap-2 bg-brand-accent text-white
-          font-syne font-semibold px-6 py-3 rounded-xl
-          hover:bg-brand-accent/90 transition-colors duration-150
-        "
-      >
-        → Create a countdown
-      </Link>
+    <main className="min-h-screen flex items-center justify-center px-4">
+      <div className="text-center">
+        <p className="font-mono text-xs uppercase tracking-widest mb-4" style={{ color: 'var(--muted)' }}>404</p>
+        <h1 className="font-syne text-4xl font-bold mb-4">Page not found</h1>
+        <p className="mb-8" style={{ color: 'var(--muted)' }}>The page you're looking for doesn't exist.</p>
+        <Link href="/" className="px-6 py-3 rounded-xl font-syne font-semibold text-white" style={{ background: 'var(--accent)' }}>
+          Go home →
+        </Link>
+      </div>
     </main>
   )
 }

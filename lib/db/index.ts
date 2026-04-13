@@ -1,23 +1,11 @@
-// lib/db/index.ts
-// Edge-compatible driver (works on Vercel Edge & Cloudflare Pages).
-// For Node.js-only routes that need connection pooling, use lib/db/node.ts instead.
+// lib/db/index.ts — Edge-compatible Neon driver (works on Vercel & Cloudflare)
+import { neon }     from '@neondatabase/serverless'
+import { drizzle }  from 'drizzle-orm/neon-http'
+import * as schema  from './schema'
 
-import { neon }   from '@neondatabase/serverless'
-import { drizzle } from 'drizzle-orm/neon-http'
-import * as schema from './schema'
+export { schema }
 
 export function getDb() {
-  if (!process.env.DATABASE_URL) {
-    // Build-time stub — avoids crashing during `next build`
-    return null as unknown as ReturnType<typeof buildDb>
-  }
-  return buildDb()
+  if (!process.env.DATABASE_URL) return null as any
+  return drizzle(neon(process.env.DATABASE_URL), { schema })
 }
-
-function buildDb() {
-  const sql = neon(process.env.DATABASE_URL!)
-  return drizzle(sql, { schema })
-}
-
-export type Db = ReturnType<typeof buildDb>
-export { schema }

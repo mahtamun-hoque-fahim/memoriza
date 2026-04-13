@@ -9,8 +9,41 @@ import {
   text,
   primaryKey,
   index,
+  pgEnum,
 } from 'drizzle-orm/pg-core'
 import type { AdapterAccountType } from 'next-auth/adapters'
+import type { InferSelectModel, InferInsertModel } from 'drizzle-orm'
+
+// ── Enums ─────────────────────────────────────────────────────────────────────
+
+export const occasionEnum = pgEnum('occasion', [
+  'anniversary',
+  'birthday',
+  'valentine',
+  'graduation',
+  'new_year',
+  'first_date',
+  'promotion',
+  'custom',
+])
+
+export const recurrenceEnum = pgEnum('recurrence', ['once', 'yearly'])
+
+export const emailTypeEnum = pgEnum('email_type', [
+  'confirmation',
+  'reminder',
+  'day_of',
+])
+
+export const emailStatusEnum = pgEnum('email_status', [
+  'queued',
+  'sent',
+  'delivered',
+  'bounced',
+  'failed',
+])
+
+export const recipientTypeEnum = pgEnum('recipient_type', ['owner', 'recipient'])
 
 // ── Auth.js required tables ───────────────────────────────────────────────────
 // These match exactly what @auth/drizzle-adapter expects.
@@ -21,6 +54,8 @@ export const users = pgTable('users', {
   email:         text('email').notNull().unique(),
   emailVerified: timestamp('email_verified', { mode: 'date' }),
   image:         text('image'),
+  role:          text('role').notNull().default('user'), // 'user' | 'admin'
+  createdAt:     timestamp('created_at').defaultNow().notNull(),
 })
 
 export const accounts = pgTable('accounts', {
@@ -53,59 +88,62 @@ export const verificationTokens = pgTable('verification_tokens', {
   pk: primaryKey({ columns: [t.identifier, t.token] }),
 }))
 
-// ── App table ─────────────────────────────────────────────────────────────────
-export const countdowns = pgTable(
-  'countdowns',
-  {
-    id:   uuid('id').primaryKey().defaultRandom(),
+// ── dates ─────────────────────────────────────────────────────────────────────
 
-    // Share slug — auto-generated (10 chars) or custom set by auth user
-    slug:       varchar('slug',        { length: 64 }).notNull().unique(),
-    customSlug: varchar('custom_slug', { length: 64 }).unique(),
+export const dates = pgTable('dates', {
+  id:     uuid('id').primaryKey().defaultRandom(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
 
-    // Event details
-    name:      varchar('name',     { length: 80 }).notNull(),
-    emoji:     varchar('emoji',    { length: 8  }),
-    timezone:  varchar('timezone', { length: 64 }).notNull(),
-    eventDate: timestamp('event_date', { withTimezone: true }).notNull(),
+  // Public share key
+  slug: varchar('slug', { length: 16 }).notNull().unique(),
 
-    // Cover image (Cloudinary CDN URL)
-    coverImage: varchar('cover_image', { length: 512 }),
+  // Event details
+  title:     varchar('title',     { length: 80  }).notNull(),
+  occasion:  occasionEnum('occasion').notNull().default('custom'),
+  eventDate: timestamp('event_date', { withTimezone: true }).notNull(),
+  recurrence: recurrenceEnum('recurrence').notNull().default('yearly'),
 
-    // Auth — references users.id (null = anonymous)
-    userId: text('user_id').references(() => users.id, { onDelete: 'set null' }),
+  // Recipient
+  recipientName:  varchar('recipient_name',  { length: 80  }),
+  recipientEmail: varchar('recipient_email', { length: 254 }),
 
-    // Anonymous edit token + creator email
-    creatorEmail: varchar('creator_email', { length: 254 }),
-    editToken:    varchar('edit_token',    { length: 64  }),
+  // Reminder config
+  reminderDays: integer('reminder_days').notNull().default(7), // 3 | 7 | 14
 
-    // Reminders
-    remindersEnabled: boolean('reminders_enabled').default(false).notNull(),
-    remindersSent:    varchar('reminders_sent', { length: 32 }).default('').notNull(),
+  // Media
+  imageUrl:      varchar('image_url',       { length: 512 }),
+  imagePublicId: varchar('image_public_id', { length: 256 }),
 
-    // Stats
-    viewCount: integer('view_count').default(0).notNull(),
+  // Status
+  isActive: boolean('is_active').notNull().default(true),
 
-    // Rate limiting (anon only)
-    ipHash: varchar('ip_hash', { length: 64 }).notNull(),
+  // Timestamps
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  userIdx:    index('idx_dates_user_id').on(t.userId),
+  slugIdx:    index('idx_dates_slug').on(t.slug),
+  dateIdx:    index('idx_dates_event_date').on(t.eventDate),
+}))
 
-    // Housekeeping
-    deletedAt: timestamp('deleted_at', { withTimezone: true }),
-    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-  },
-  (t) => ({
-    slugIdx:       index('idx_countdowns_slug').on(t.slug),
-    customSlugIdx: index('idx_countdowns_custom_slug').on(t.customSlug),
-    userIdIdx:     index('idx_countdowns_user_id').on(t.userId),
-    ipHashIdx:     index('idx_countdowns_ip_hash').on(t.ipHash),
-    eventDateIdx:  index('idx_countdowns_event_date').on(t.eventDate),
-    editTokenIdx:  index('idx_countdowns_edit_token').on(t.editToken),
-  })
-)
+// ── email_logs ────────────────────────────────────────────────────────────────
 
-// ── Drizzle inferred types ────────────────────────────────────────────────────
-import type { InferSelectModel, InferInsertModel } from 'drizzle-orm'
+export const emailLogs = pgTable('email_logs', {
+  id:             uuid('id').primaryKey().defaultRandom(),
+  dateId:         uuid('date_id').notNull().references(() => dates.id, { onDelete: 'cascade' }),
+  recipientType:  recipientTypeEnum('recipient_type').notNull(),
+  recipientEmail: varchar('recipient_email', { length: 254 }).notNull(),
+  type:           emailTypeEnum('type').notNull(),
+  resendId:       varchar('resend_id', { length: 64 }),
+  status:         emailStatusEnum('status').notNull().default('queued'),
+  sentAt:         timestamp('sent_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  dateIdx: index('idx_email_logs_date_id').on(t.dateId),
+}))
 
-export type User         = InferSelectModel<typeof users>
-export type Countdown    = InferSelectModel<typeof countdowns>
-export type NewCountdown = InferInsertModel<typeof countdowns>
+// ── Inferred types ────────────────────────────────────────────────────────────
+
+export type User      = InferSelectModel<typeof users>
+export type Date_     = InferSelectModel<typeof dates>
+export type NewDate_  = InferInsertModel<typeof dates>
+export type EmailLog  = InferSelectModel<typeof emailLogs>
