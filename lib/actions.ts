@@ -1,20 +1,22 @@
 // lib/actions.ts — Server Actions for dates CRUD
 'use server'
 
-import { auth }         from '@/lib/auth'
-import { getDb, schema } from '@/lib/db'
-import { eq, and }      from 'drizzle-orm'
-import { generateSlug } from '@/lib/utils'
-import { revalidatePath } from 'next/cache'
-import { redirect }     from 'next/navigation'
-import { z }            from 'zod'
+import { auth }             from '@/lib/auth'
+import { getDb, schema }    from '@/lib/db'
+import { eq, and }          from 'drizzle-orm'
+import { generateSlug }     from '@/lib/utils'
+import { revalidatePath }   from 'next/cache'
+import { redirect }         from 'next/navigation'
+import { z }                from 'zod'
+import { sendEmail }        from '@/lib/resend'
+import { confirmationEmail } from '@/components/emails/ReminderEmail'
 
 // ── Validation schema ─────────────────────────────────────────────────────────
 
 const DateSchema = z.object({
   title:          z.string().min(1).max(80),
   occasion:       z.enum(['anniversary','birthday','valentine','graduation','new_year','first_date','promotion','custom']),
-  eventDate:      z.string().min(1), // ISO date string from <input type="date">
+  eventDate:      z.string().min(1),
   recurrence:     z.enum(['once','yearly']),
   recipientName:  z.string().max(80).optional(),
   recipientEmail: z.string().email().optional().or(z.literal('')),
@@ -27,7 +29,7 @@ const DateSchema = z.object({
 
 export async function createDate(formData: FormData) {
   const session = await auth()
-  if (!session?.user?.id) return { error: 'Unauthenticated' }
+  if (!session?.user?.id || !session.user.email) return { error: 'Unauthenticated' }
 
   const raw = {
     title:          formData.get('title'),
@@ -44,12 +46,12 @@ export async function createDate(formData: FormData) {
   const parsed = DateSchema.safeParse(raw)
   if (!parsed.success) return { error: 'Invalid data', issues: parsed.error.flatten() }
 
-  const data  = parsed.data
-  const slug  = generateSlug()
-  const db    = getDb()
+  const data = parsed.data
+  const slug = generateSlug()
+  const db   = getDb()
   if (!db) return { error: 'DB unavailable' }
 
-  await db.insert(schema.dates).values({
+  const [newDate] = await db.insert(schema.dates).values({
     userId:         session.user.id,
     slug,
     title:          data.title,
@@ -61,7 +63,33 @@ export async function createDate(formData: FormData) {
     reminderDays:   data.reminderDays,
     imageUrl:       data.imageUrl       || null,
     imagePublicId:  data.imagePublicId  || null,
-  })
+  }).returning()
+
+  // ── Send confirmation email to owner (fire-and-forget, don't block redirect) ─
+  try {
+    const { subject, html } = confirmationEmail({
+      title:         newDate.title,
+      occasion:      newDate.occasion,
+      eventDate:     new Date(newDate.eventDate),
+      slug:          newDate.slug,
+      recipientName: newDate.recipientName,
+      recurrence:    newDate.recurrence,
+    })
+
+    const resendId = await sendEmail({ to: session.user.email, subject, html })
+
+    await db.insert(schema.emailLogs).values({
+      dateId:         newDate.id,
+      recipientType:  'owner',
+      recipientEmail: session.user.email,
+      type:           'confirmation',
+      resendId,
+      status:         'sent',
+    })
+  } catch (err) {
+    // Email failure shouldn't block the user — log and continue
+    console.error('[createDate] confirmation email failed:', err)
+  }
 
   revalidatePath('/dashboard')
   redirect('/dashboard')
@@ -121,7 +149,6 @@ export async function deleteDate(id: string) {
   const db = getDb()
   if (!db) return { error: 'DB unavailable' }
 
-  // Verify ownership before deleting
   await db
     .delete(schema.dates)
     .where(and(eq(schema.dates.id, id), eq(schema.dates.userId, session.user.id)))

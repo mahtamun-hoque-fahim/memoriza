@@ -1,16 +1,13 @@
 // app/(user)/dashboard/page.tsx
-import { auth }         from '@/lib/auth'
-import { redirect }     from 'next/navigation'
+import { auth }          from '@/lib/auth'
+import { redirect }      from 'next/navigation'
 import { getDb, schema } from '@/lib/db'
-import { eq, desc }     from 'drizzle-orm'
-import { DateCard }     from '@/components/dashboard/DateCard'
-import Link             from 'next/link'
+import { eq, desc }      from 'drizzle-orm'
+import { DateCard }      from '@/components/dashboard/DateCard'
+import Link              from 'next/link'
 import type { Metadata } from 'next'
 
-export const metadata: Metadata = {
-  title: 'Dashboard',
-  robots: { index: false },
-}
+export const metadata: Metadata = { title: 'Dashboard', robots: { index: false } }
 
 export default async function DashboardPage() {
   const session = await auth()
@@ -27,7 +24,6 @@ export default async function DashboardPage() {
 
   return (
     <main className="min-h-screen px-4 py-12">
-      {/* Background grid */}
       <div className="fixed inset-0 pointer-events-none" style={{
         backgroundImage: `linear-gradient(rgba(108,99,255,0.03) 1px, transparent 1px),
           linear-gradient(90deg, rgba(108,99,255,0.03) 1px, transparent 1px)`,
@@ -36,7 +32,7 @@ export default async function DashboardPage() {
 
       <div className="relative z-10 max-w-5xl mx-auto">
         {/* Header */}
-        <div className="flex items-start justify-between gap-4 mb-10 flex-wrap">
+        <div className="flex items-start justify-between gap-4 mb-2 flex-wrap">
           <div>
             <p className="font-mono text-xs uppercase tracking-widest mb-1" style={{ color: 'var(--muted)' }}>
               {session.user.email}
@@ -46,14 +42,25 @@ export default async function DashboardPage() {
               {rows.length} date{rows.length !== 1 ? 's' : ''} saved
             </p>
           </div>
-          <Link
-            href="/dashboard/new"
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-syne font-semibold text-sm text-white hover:opacity-90 transition-all"
-            style={{ background: 'var(--accent)' }}
-          >
-            + Add date
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/dashboard/emails"
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-mono text-xs hover:opacity-80 transition-all"
+              style={{ background: 'var(--surface-raised)', border: '1px solid var(--border)', color: 'var(--muted)' }}
+            >
+              ✉ Email history
+            </Link>
+            <Link
+              href="/dashboard/new"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-syne font-semibold text-sm text-white hover:opacity-90 transition-all"
+              style={{ background: 'var(--accent)' }}
+            >
+              + Add date
+            </Link>
+          </div>
         </div>
+
+        <div className="mb-10" />
 
         {/* Empty state */}
         {rows.length === 0 ? (

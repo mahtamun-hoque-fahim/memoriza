@@ -1,20 +1,25 @@
 // app/api/cron/reminders/route.ts
-// Runs daily at 08:00 UTC via Vercel cron (vercel.json)
-// Finds dates due for reminders and sends emails to owner + recipient.
-// Phase 3 will flesh this out fully.
-import { NextResponse } from 'next/server'
+// Runs daily at 08:00 UTC via Vercel cron (vercel.json).
+// Also callable manually with the correct CRON_SECRET for testing.
 
-export const runtime = 'nodejs' // needs DB + email, not Edge
+import { NextResponse }     from 'next/server'
+import { processReminders } from '@/lib/reminder'
+
+export const runtime = 'nodejs'
+export const maxDuration = 60  // Vercel Pro: up to 300s, Hobby: 60s
 
 export async function GET(req: Request) {
-  // Verify request is from Vercel cron
   const authHeader = req.headers.get('authorization')
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  // TODO Phase 3: query dates where event_date - reminder_days = TODAY
-  // and no reminder email was sent today, then send via Resend.
-
-  return NextResponse.json({ ok: true, processed: 0, message: 'Phase 3 pending' })
+  try {
+    const result = await processReminders()
+    console.log('[cron/reminders]', result)
+    return NextResponse.json({ ok: true, ...result })
+  } catch (err: any) {
+    console.error('[cron/reminders] fatal:', err)
+    return NextResponse.json({ ok: false, error: err.message }, { status: 500 })
+  }
 }
