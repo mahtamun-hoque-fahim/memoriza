@@ -4,28 +4,31 @@
 import { getDb, schema }        from '@/lib/db'
 import { sendEmail }            from '@/lib/resend'
 import { reminderOwnerEmail, reminderRecipientEmail } from '@/components/emails/ReminderEmail'
-import { and, eq, sql, isNotNull } from 'drizzle-orm'
+import { and, eq, sql }         from 'drizzle-orm'
+import { drizzle }              from 'drizzle-orm/neon-http'
+import { neon }                 from '@neondatabase/serverless'
+
+// Non-null DB type — helpers only called after null guard in processReminders
+type Db = ReturnType<typeof drizzle<typeof schema>>
 
 // ── Resolve next occurrence for yearly dates ──────────────────────────────────
 
 function nextOccurrence(eventDate: Date, recurrence: string): Date {
   const d = new Date(eventDate)
   if (recurrence !== 'yearly') return d
-
   const now = new Date()
   d.setFullYear(now.getFullYear())
-  // If this year's date has already passed by more than a day, use next year
   if (d.getTime() < now.getTime() - 86_400_000) {
     d.setFullYear(now.getFullYear() + 1)
   }
   return d
 }
 
-// ── Days until a date (floored to whole days, UTC) ────────────────────────────
+// ── Days until a date (UTC) ───────────────────────────────────────────────────
 
 function daysUntil(target: Date): number {
   const now      = new Date()
-  const todayUtc = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
+  const todayUtc = Date.UTC(now.getUTCFullYear(),    now.getUTCMonth(),    now.getUTCDate())
   const tgtUtc   = Date.UTC(target.getUTCFullYear(), target.getUTCMonth(), target.getUTCDate())
   return Math.round((tgtUtc - todayUtc) / 86_400_000)
 }
@@ -33,10 +36,10 @@ function daysUntil(target: Date): number {
 // ── Already sent today? ───────────────────────────────────────────────────────
 
 async function alreadySentToday(
-  db: ReturnType<typeof getDb>,
-  dateId: string,
+  db:             Db,
+  dateId:         string,
   recipientEmail: string,
-  type: 'reminder' | 'day_of',
+  type:           'reminder' | 'day_of',
 ): Promise<boolean> {
   const todayStart = new Date()
   todayStart.setUTCHours(0, 0, 0, 0)
@@ -60,15 +63,14 @@ async function alreadySentToday(
 // ── Log + send ────────────────────────────────────────────────────────────────
 
 async function logAndSend(
-  db: ReturnType<typeof getDb>,
-  dateId:        string,
-  recipientType: 'owner' | 'recipient',
+  db:             Db,
+  dateId:         string,
+  recipientType:  'owner' | 'recipient',
   recipientEmail: string,
-  type:          'reminder' | 'day_of',
-  subject:       string,
-  html:          string,
+  type:           'reminder' | 'day_of',
+  subject:        string,
+  html:           string,
 ): Promise<void> {
-  // Insert log row first (idempotency guard above handles duplicates)
   const [logRow] = await db
     .insert(schema.emailLogs)
     .values({ dateId, recipientType, recipientEmail, type, status: 'queued' })
@@ -90,13 +92,12 @@ async function logAndSend(
 }
 
 // ── processReminders ─────────────────────────────────────────────────────────
-// Called by the cron route. Returns counts for logging.
 
 export async function processReminders(): Promise<{ processed: number; sent: number; errors: number }> {
   const db = getDb()
   if (!db) throw new Error('DB unavailable')
 
-  // Fetch all active dates that have a user email
+  // db is narrowed to non-null Db from here on
   const rows = await db
     .select({
       id:             schema.dates.id,
@@ -120,11 +121,10 @@ export async function processReminders(): Promise<{ processed: number; sent: num
 
   for (const row of rows) {
     try {
-      const next  = nextOccurrence(new Date(row.eventDate), row.recurrence)
-      const days  = daysUntil(next)
+      const next = nextOccurrence(new Date(row.eventDate), row.recurrence)
+      const days = daysUntil(next)
       const type: 'reminder' | 'day_of' = days === 0 ? 'day_of' : 'reminder'
 
-      // Only send on day-of or exactly on the configured reminder window
       if (days !== 0 && days !== row.reminderDays) continue
 
       const dateInfo = {
@@ -138,14 +138,12 @@ export async function processReminders(): Promise<{ processed: number; sent: num
 
       processed++
 
-      // ── Owner email ───────────────────────────────────────────────────────
       if (!(await alreadySentToday(db, row.id, row.ownerEmail, type))) {
         const { subject, html } = reminderOwnerEmail(dateInfo, days)
         await logAndSend(db, row.id, 'owner', row.ownerEmail, type, subject, html)
         sent++
       }
 
-      // ── Recipient email ───────────────────────────────────────────────────
       if (row.recipientEmail && !(await alreadySentToday(db, row.id, row.recipientEmail, type))) {
         const { subject, html } = reminderRecipientEmail(dateInfo, days, row.ownerEmail)
         await logAndSend(db, row.id, 'recipient', row.recipientEmail, type, subject, html)
