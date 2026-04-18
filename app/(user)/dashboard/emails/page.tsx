@@ -53,7 +53,7 @@ export default async function EmailHistoryPage() {
   }
 
   const dateIds = userDates.map((d) => d.id)
-  const dateMap = Object.fromEntries(userDates.map((d) => [d.id, d] as const))
+  const dateMap: Record<string, typeof userDates[0]> = Object.fromEntries(userDates.map((d) => [d.id, d]))
 
   // Fetch all email logs for those dates
   const logs = await db

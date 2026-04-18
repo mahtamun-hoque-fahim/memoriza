@@ -1,20 +1,20 @@
 // middleware.ts — protects /dashboard and /admin routes
-import { auth } from '@/lib/auth'
+// next-auth v5: session is on req.auth (NextAuthRequest extends NextRequest)
+import { auth }        from '@/lib/auth'
 import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
 
-export default auth(async (req) => {
-  const { nextUrl, auth: session } = req as any
-
+export default auth((req) => {
+  const session  = req.auth
   const isAuthed = !!session?.user
   const isAdmin  = session?.user?.role === 'admin'
+  const { pathname } = req.nextUrl
 
-  if (nextUrl.pathname.startsWith('/admin') && !isAdmin) {
-    return NextResponse.redirect(new URL('/sign-in', nextUrl))
+  if (pathname.startsWith('/admin') && !isAdmin) {
+    return NextResponse.redirect(new URL('/sign-in', req.nextUrl))
   }
 
-  if (nextUrl.pathname.startsWith('/dashboard') && !isAuthed) {
-    return NextResponse.redirect(new URL('/sign-in', nextUrl))
+  if (pathname.startsWith('/dashboard') && !isAuthed) {
+    return NextResponse.redirect(new URL('/sign-in', req.nextUrl))
   }
 })
 

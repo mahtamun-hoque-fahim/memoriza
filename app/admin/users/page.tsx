@@ -1,6 +1,6 @@
 // app/admin/users/page.tsx
 import { getDb, schema } from '@/lib/db'
-import { sql, count, eq } from 'drizzle-orm'
+import { sql, count }     from 'drizzle-orm'
 import { UserRow }       from '@/components/admin/UserRow'
 import type { Metadata } from 'next'
 

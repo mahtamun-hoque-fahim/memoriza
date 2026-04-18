@@ -5,11 +5,9 @@ import { getDb, schema }        from '@/lib/db'
 import { sendEmail }            from '@/lib/resend'
 import { reminderOwnerEmail, reminderRecipientEmail } from '@/components/emails/ReminderEmail'
 import { and, eq, sql }         from 'drizzle-orm'
-import { drizzle }              from 'drizzle-orm/neon-http'
-import { neon }                 from '@neondatabase/serverless'
 
 // Non-null DB type — helpers only called after null guard in processReminders
-type Db = ReturnType<typeof drizzle<typeof schema>>
+type Db = NonNullable<ReturnType<typeof getDb>>
 
 // ── Resolve next occurrence for yearly dates ──────────────────────────────────
 
