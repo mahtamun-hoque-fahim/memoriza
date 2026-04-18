@@ -14,11 +14,12 @@ function getAuthDb() {
 }
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   adapter: DrizzleAdapter(getAuthDb(), {
-    usersTable:              schema.users,
-    accountsTable:           schema.accounts,
-    sessionsTable:           schema.sessions,
-    verificationTokensTable: schema.verificationTokens,
+    usersTable:              schema.users              as any,
+    accountsTable:           schema.accounts           as any,
+    sessionsTable:           schema.sessions           as any,
+    verificationTokensTable: schema.verificationTokens as any,
   }),
 
   providers: [
