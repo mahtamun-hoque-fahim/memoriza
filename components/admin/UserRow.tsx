@@ -20,12 +20,12 @@ export function UserRow({ user }: Props) {
   const isAdmin = user.role === 'admin'
 
   function handleRoleToggle() {
-    start(() => setUserRole(user.id, isAdmin ? 'user' : 'admin'))
+    start(() => { setUserRole(user.id, isAdmin ? 'user' : 'admin') })
   }
 
   function handleDeleteDates() {
     if (!confirm) { setConfirm(true); return }
-    start(() => deleteUserDates(user.id))
+    start(() => { deleteUserDates(user.id) })
     setConfirm(false)
   }
 

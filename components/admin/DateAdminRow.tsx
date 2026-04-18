@@ -26,11 +26,11 @@ export function DateAdminRow({ date }: Props) {
 
   function handleDelete() {
     if (!confirm) { setConfirm(true); return }
-    start(() => adminDeleteDate(date.id))
+    start(() => { adminDeleteDate(date.id) })
   }
 
   function handleToggle() {
-    start(() => toggleDateActive(date.id, !date.isActive))
+    start(() => { toggleDateActive(date.id, !date.isActive) })
   }
 
   const eventStr = new Date(date.eventDate).toLocaleDateString('en-US', {
