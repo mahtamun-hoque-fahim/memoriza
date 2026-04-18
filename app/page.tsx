@@ -11,7 +11,7 @@ const FEATURES = [
   {
     icon: '💌',
     title: 'Dual email reminders',
-    desc:  'Reminders go to you and the person you're celebrating — 3, 7, or 14 days before.',
+    desc:  "Reminders go to you and the person you're celebrating — 3, 7, or 14 days before.",
   },
   {
     icon: '🎨',
